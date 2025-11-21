@@ -1,0 +1,141 @@
+// Ultrasonic set up
+float ultrasonicDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2.0;
+  delay(10);
+  return distance;
+}
+
+// Speed Variable
+int SPEED = 175;
+
+// Functions for directional movement
+
+// Forward
+void Forward(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  Serial.println("Forward");
+  delay(150);
+}
+// Reverse
+void Reverse(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  Serial.println("Reverse");
+  delay(150);
+}
+// Turn Left
+void Left(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Left");
+  delay(400);
+}
+// Turn Right
+void Right(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Right");
+  delay(400);
+}
+// Is there an obstacle in front - yes: forward and back very quickly. - no: car turns left then right quickly
+
+// Is there an obstacle on the left
+
+// Is there an obstacle on the right
+
+// Solve the maze
+
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(33, OUTPUT);
+  pinMode(25, OUTPUT);
+  pinMode(26, OUTPUT);
+  pinMode(27, OUTPUT);
+  digitalWrite(27, HIGH);
+  pinMode(14, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(15, INPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, INPUT);
+  pinMode(18, OUTPUT);
+  pinMode(19, INPUT);
+}
+void loop() {
+  if (ultrasonicDistance(4, 5) < 10) {
+    analogWrite(33, 0);
+    analogWrite(13, 0);
+    Serial.println("Object Ahead");
+    Reverse();
+    if (ultrasonicDistance(18, 19) > ultrasonicDistance(2, 15)) {
+      Right();
+      }
+    if (ultrasonicDistance(18, 19) < ultrasonicDistance(2, 15)) {
+      Left();
+      }
+    }
+  else{
+    Forward();
+    }
+
+
+  // } else {
+  //   digitalWrite(25, HIGH);
+  //   digitalWrite(26, LOW);
+  //   analogWrite(33, SPEED);
+  //   digitalWrite(14, LOW);
+  //   digitalWrite(12, HIGH);
+  //   analogWrite(13, SPEED);
+  //   delay(500);
+  //   Serial.println("None");
+  // }
+}
+/*if (ultrasonicDistance(4, 5) > ultrasonicDistance(18, 19)) {
+      digitalWrite(25, HIGH);
+      digitalWrite(26, LOW);
+      analogWrite(33, SPEED);
+      digitalWrite(14, LOW);
+      digitalWrite(12, LOW);
+      analogWrite(13, SPEED);
+      Serial.println("Left Clear");
+      delay(500);
+    }
+
+  } else {
+    digitalWrite(25, HIGH);
+    digitalWrite(26, LOW);
+    analogWrite(33, SPEED);
+    digitalWrite(14, HIGH);
+    digitalWrite(12, LOW);
+    analogWrite(13, SPEED);
+    Serial.println("Front Clear");
+    delay(500);
+  }
+}
+
+*/
