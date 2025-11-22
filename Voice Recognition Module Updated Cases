@@ -1,0 +1,180 @@
+#include "DFRobot_DF2301Q.h"
+
+// Ultrasonic set up
+float ultrasonicDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2.0;
+  delay(10);
+  return distance;
+}
+
+// Speed Variable
+int SPEED = 175;
+#define SDA_PIN 21         
+#define SCL_PIN 22
+#define LED 2
+
+// Use hardware Serial1 on the ESP32 (UART1)
+HardwareSerial ASRSerial(1);
+
+
+//I2C communication
+DFRobot_DF2301Q_I2C asr;
+
+// Functions for directional movement
+
+// Forward
+void Forward(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  Serial.println("Forward");
+  delay(150);
+}
+// Reverse
+void Reverse(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  Serial.println("Reverse");
+  delay(150);
+}
+// Turn Left
+void Left(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Left");
+  delay(400);
+}
+// Turn Right
+void Right(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Right");
+  delay(400);
+}
+// Is there an obstacle in front - yes: forward and back very quickly. - no: car turns left then right quickly
+
+// Is there an obstacle on the left
+
+// Is there an obstacle on the right
+
+// Solve the maze
+
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(33, OUTPUT);
+  pinMode(25, OUTPUT);
+  pinMode(26, OUTPUT);
+  pinMode(27, OUTPUT);
+  digitalWrite(27, HIGH);
+  pinMode(14, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(15, INPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, INPUT);
+  pinMode(18, OUTPUT);
+  pinMode(19, INPUT);
+
+  // Init the sensor
+  while (!asr.begin()) {
+    Serial.println("Communication with DF2301Q failed, please check I2C wiring/address");
+    delay(3000);
+  }
+  Serial.println("DF2301Q begin OK!");
+
+    // ----- Configuration -----
+
+  // Set voice volume (1–7)
+  asr.setVolume(4);
+
+  // Mute mode: 0 = unmute, 1 = mute
+  asr.setMuteMode(0);
+
+  // Wake-up duration (0–255 seconds)
+  asr.setWakeTime(20);
+
+  // Read back wake-up time
+  uint8_t wakeTime = asr.getWakeTime();
+  Serial.print("wakeTime = ");
+  Serial.println(wakeTime);
+}
+void loop() {
+  uint8_t CMDID = asr.getCMDID();
+  
+  switch (CMDID) {
+    case 22:  // “Go Forward”
+      digitalWrite(LED, HIGH);
+      Forward();
+      break;
+
+    case 23:  // “Retreat”
+      digitalWrite(LED, LOW);
+      Serial.println("Received 'Turn off the light', command flag 104");
+      Reverse();
+      break;
+
+    case 5: // "Stop"
+      analogWrite(33, 0);
+      analogWrite(13, 0);
+      break;
+    
+    case 38: //Object Recognition
+      Serial.print("Distance: ");
+      Serial.print(ultrasonicDistance(4, 5)); 
+      Serial.println("cm");
+      break;
+    case 6: //Wander Around
+      if (ultrasonicDistance(4, 5) < 10) {
+        analogWrite(33, 0);
+        analogWrite(13, 0);
+        Serial.println("Object Ahead");
+        Reverse();
+        if (ultrasonicDistance(18, 19) > ultrasonicDistance(2, 15)) {
+          Right();
+          }
+        if (ultrasonicDistance(18, 19) < ultrasonicDistance(2, 15)) {
+          Left();
+          }
+        }
+      else{
+        Forward();
+        }
+      break;                                
+
+    default:
+      if (CMDID != 0) {
+        Serial.print("CMDID = ");
+        Serial.println(CMDID);
+      }
+      break;
+  }
+
+  delay(300);
+
+
+
+}
+
