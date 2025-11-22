@@ -1,0 +1,25 @@
+  case 7: 
+  //object in front- YES
+    if (ultrasonicDistance(4, 5) < 10){
+      //stop moving
+      analogWrite(33, 0);  
+      analogWrite(13, 0);   
+      // body forward 
+      delay(70);
+      // body back
+      delay(70);
+    //led ring = red
+  //object in front- NO
+    if (ultrasonicDistance(4, 5) > 10){
+      //stop moving
+      analogWrite(33, 0);  
+      analogWrite(13, 0);   
+      // body left 
+
+      delay(70);
+      // body right
+
+      delay(70);
+    //led ring = green
+    }
+  }
