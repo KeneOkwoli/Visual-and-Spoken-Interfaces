@@ -1,0 +1,8 @@
+Speech Recognition Commands:
+
+"Go Forward" - Moves Forward
+"Retreat" - Moves Backwards
+"Stop" - Stops the robot
+"Object Recognition" - Prints the distance of an object in front of the car (needs to be connected to the PC)
+"Obstacle" - Checks if an object is too close in front.(YES --> Head Nodding, NO --> Head Shaking)
+"Wander Around" - Moves freely and uses the three sensors to choose which direction it should go in.
