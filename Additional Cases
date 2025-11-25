@@ -82,14 +82,6 @@ void Right(){
   Serial.println("Turning Right");
   delay(400);
 }
-// Is there an obstacle in front - yes: forward and back very quickly. - no: car turns left then right quickly
-
-// Is there an obstacle on the left
-
-// Is there an obstacle on the right
-
-// Solve the maze
-
 
 void setup() {
   Serial.begin(115200);
@@ -111,7 +103,7 @@ void setup() {
   pinMode(19, INPUT);
 
   // --- I2C SETUP ---
-  Wire.begin(SDA_PIN, SCL_PIN);   // make sure DF2301Q is on GPIO21/22
+  Wire.begin(SDA_PIN, SCL_PIN);  
 
   // Init the sensor
   while (!asr.begin()) {
@@ -221,6 +213,8 @@ void loop() {
       break;
 
     }
+
+    // Capable of solving a maze 
     case 6: //Wander Around
       if (ultrasonicDistance(4, 5) < 10) {
         analogWrite(33, 0);
@@ -252,5 +246,4 @@ void loop() {
 
 
 }
-
 
