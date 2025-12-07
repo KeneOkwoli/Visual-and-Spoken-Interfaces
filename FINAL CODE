@@ -1,0 +1,288 @@
+#include "DFRobot_DF2301Q.h"
+#include <Wire.h>
+#define FASTLED_ALLOW_INTERRUPTS 0
+#include <FastLED.h>
+
+// Speed Variable
+int SPEED = 175;
+int SLOW = 70;
+#define SDA_PIN 21         
+#define SCL_PIN 22
+#define LED 2
+
+// ---- FASTLED SETUP ----
+#define NUM_LEDS 12
+#define LED_PIN 16      
+CRGB leds[NUM_LEDS];
+
+// Ultrasonic set up
+float ultrasonicDistance(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2.0;
+  delay(10);
+  return distance;
+}
+
+
+
+// Use hardware Serial1 on the ESP32 (UART1)
+HardwareSerial ASRSerial(1);
+
+
+//I2C communication
+DFRobot_DF2301Q_I2C asr;
+
+// Functions for directional movement
+
+void StopMove(){
+  analogWrite(33, 0);
+  analogWrite(13, 0);
+}
+// Forward
+void Forward(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  delay(500);
+  // analogWrite(33, 0);
+  // analogWrite(13, 0);
+  // delay(150);
+}
+
+void ForwardStep(){
+  Forward();
+  delay(500);
+  StopMove();
+}
+// Reverse
+void Reverse(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  delay(500);
+  // analogWrite(33, 0);
+  // analogWrite(13, 0);
+  // delay(150);
+}
+// ReverseStep
+void ReverseStep(){
+  Reverse();
+  delay(500);
+  StopMove();
+  // analogWrite(33, 0);
+  // analogWrite(13, 0);
+  // delay(150);
+}
+// Turn Left
+void Left(){
+  digitalWrite(25, HIGH);
+  digitalWrite(26, LOW);
+  analogWrite(33, SPEED);
+  digitalWrite(14, LOW);
+  digitalWrite(12, HIGH);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Left");
+  delay(400);
+}
+// Turn Right
+void Right(){
+  digitalWrite(25, LOW);
+  digitalWrite(26, HIGH);
+  analogWrite(33, SPEED);
+  digitalWrite(14, HIGH);
+  digitalWrite(12, LOW);
+  analogWrite(13, SPEED);
+  Serial.println("Turning Right");
+  delay(400);
+}
+
+void Wander(){
+  while (ultrasonicDistance(4, 5) > 10){
+    Serial.println("GOING STRAIGHT");
+    Forward();
+    delay(100);
+  //Is front sensor less than 10cm?
+  if (ultrasonicDistance(4, 5) < 10) {
+    //stop the motors
+    analogWrite(33, 0);
+    analogWrite(13, 0);
+    Serial.print("OBJECT AHEAD TURNING: ");
+    ReverseStep();
+    //Is there more space on the right than the left?
+    if (ultrasonicDistance(18, 19) > ultrasonicDistance(2, 15)) {
+      Right();
+      Serial.println("RIGHT");
+      }
+    // Is there more space on the left than the right?
+    if (ultrasonicDistance(18, 19) < ultrasonicDistance(2, 15)) {
+      Left();
+      Serial.println("LEFT");
+      }
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+
+  // --- GPIO setup ---
+  pinMode(33, OUTPUT);
+  pinMode(25, OUTPUT);
+  pinMode(26, OUTPUT);
+  pinMode(27, OUTPUT);
+  digitalWrite(27, HIGH);
+  pinMode(14, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(2, OUTPUT);
+  pinMode(15, INPUT);
+  pinMode(4, OUTPUT);
+  pinMode(5, INPUT);
+  pinMode(18, OUTPUT);
+  pinMode(19, INPUT);
+
+  // --- I2C SETUP ---
+  Wire.begin(SDA_PIN, SCL_PIN);  
+
+  // Init the sensor
+  while (!asr.begin()) {
+    Serial.println("Communication with DF2301Q failed, please check I2C wiring/address");
+    delay(3000);
+  }
+  Serial.println("DF2301Q begin OK!");
+
+  // FASTLED INIT
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  FastLED.setBrightness(20);  // reduce current draw so you don’t brown-out the bus
+
+  // ----- Configuration -----
+  asr.setVolume(4);
+  asr.setMuteMode(0);
+  asr.setWakeTime(20);
+
+  uint8_t wakeTime = asr.getWakeTime();
+  Serial.print("wakeTime = ");
+  Serial.println(wakeTime);
+}
+
+void loop() {
+  // CMDID = Command ID
+  // asr.getCMDID gets the current command ID used for each case
+  uint8_t CMDID = asr.getCMDID(); 
+  
+  switch (CMDID) {
+    case 22:  // “Go Forward”
+      digitalWrite(LED, HIGH);
+      Serial.println("GOING FORWARD");
+      ForwardStep();
+      break;
+
+    case 23:  // “Retreat”
+      digitalWrite(LED, LOW);
+      Serial.println("REVERSING");
+      ReverseStep();
+      delay(100);
+      break;
+
+    case 5: // "Stop"
+      analogWrite(33, 0);
+      analogWrite(13, 0);
+      Serial.println("Stopping");
+      break;
+    
+    case 38: //Object Recognition
+      Serial.print("DISTANCE ");
+      Serial.print(ultrasonicDistance(4, 5)); 
+      Serial.println("CM");
+      break;
+
+    case 7:  // Obsatcle
+  //object in front- YES - Head Nodding
+      if (ultrasonicDistance(4, 5) < 10){
+      Serial.println("OBJECT AHEAD");
+      //stop moving
+      analogWrite(33, 0);  
+      analogWrite(13, 0);   
+      // body forward 
+      digitalWrite(25, HIGH);
+      digitalWrite(26, LOW);
+      analogWrite(33, SLOW);
+      digitalWrite(14, HIGH);
+      digitalWrite(12, LOW);
+      analogWrite(13, SLOW);
+      delay(100);
+      // body back
+      digitalWrite(25, LOW);
+      digitalWrite(26, HIGH);
+      analogWrite(33, SLOW);
+      digitalWrite(14, LOW);
+      digitalWrite(12, HIGH);
+      analogWrite(13, SLOW);
+      delay(100);
+      //led ring = red
+      fill_solid(leds, NUM_LEDS, CRGB::Red);
+      FastLED.show();
+      Serial.println("NODDING");
+      delay(200);}
+
+      //object in front- NO - headshaking
+      if (ultrasonicDistance(4, 5) > 10){
+      Serial.println("NO OBJECT AHEAD");
+      //stop moving
+      analogWrite(33, 0);  
+      analogWrite(13, 0);   
+      // body left 
+      digitalWrite(25, HIGH);
+      digitalWrite(26, LOW);
+      analogWrite(33, SLOW);
+      digitalWrite(14, LOW);
+      digitalWrite(12, HIGH);
+      analogWrite(13, SLOW);
+      delay(100);
+      // body right
+      digitalWrite(25, LOW);
+      digitalWrite(26, HIGH);
+      analogWrite(33, SLOW);
+      digitalWrite(14, HIGH);
+      digitalWrite(12, LOW);
+      analogWrite(13, SLOW);
+      delay(100);
+      //led ring = green
+      fill_solid(leds, NUM_LEDS, CRGB::Green);
+      FastLED.show();
+      Serial.println("HEAD SHAKE");
+      delay(200);
+      break;
+
+    }
+
+    // Capable of solving a maze 
+    case 6: //Wander Around
+      Serial.println("WANDERING AROUND...");
+      Wander();
+      break;                                
+
+    default:
+      if (CMDID != 0) {
+        Serial.print("CMDID = ");
+        Serial.println(CMDID);
+      }
+      break;
+  }
+
+  delay(10);
+
+
+
+}
